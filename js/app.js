@@ -7,10 +7,10 @@ var Enemy = function() {
     // a helper we've provided to easily load images
     this.sprite = 'images/enemy-bug.png';
     // Set x and y position of enemy
-    this.x = -100
-    this.y = [236, 154, 72][Math.floor(Math.random()*3)]
+    this.x = -100;
+    this.y = [236, 154, 72][Math.floor(Math.random()*3)];
     // Set speed of enemy
-    this.speed = [50, 150, 250][Math.floor(Math.random()*3)]
+    this.speed = [50, 150, 250][Math.floor(Math.random()*3)];
 };
 
 // Update the enemy's position, required method for game
@@ -21,18 +21,12 @@ Enemy.prototype.update = function(dt) {
     // all computers.
     this.x += this.speed * dt;
     if (this.x > 500) {
-      this.x = -100
-      this.y = [236, 154, 72][Math.floor(Math.random()*3)]
-      this.speed = [50, 150, 250][Math.floor(Math.random()*3)]
+      this.x = -100;
+      this.y = [236, 154, 72][Math.floor(Math.random()*3)];
+      this.speed = [50, 150, 250][Math.floor(Math.random()*3)];
     }
     // check player collision
-    if (player.y == this.y) {
-      if (this.x + 80 > player.x && this.x < player.x + 80) {
-        player.reset();
-        allEnemies = [new Enemy(), new Enemy(), new Enemy(), new Enemy()]; //back to four enemies on loss
-        winCounter = 0; //win counter resets on loss
-      }
-    }
+    checkCollision(this.x, this.y);
 };
 
 // Draw the enemy on the screen, required method for game
@@ -46,16 +40,15 @@ var Gem = function() {
     // a helper we've provided to easily load images
     this.sprite = 'images/Gem Blue.png';
     // Set x and y position of gem
-    this.x = 200
-    this.y = 400
+    this.x = 200;
+    this.y = 400;
 };
 
 Gem.prototype.update = function(dt) {
     // check player collision with gem
     if (player.y == this.y) {
       if (this.x + 80 > player.x && this.x < player.x + 80) {
-        player.reset();
-        winCounter++;
+        beginAgain();
       }
     }
 };
@@ -68,54 +61,58 @@ Gem.prototype.render = function() {
 // Now write your own player class
 // This class requires an update(), render() and
 // a handleInput() method.
-let Player = {
-  sprite: 'images/char-boy.png',
-  x: 200,
-  y: 400,
-  update: function() {
-    // update the plaer x and y position
-    x = this.x;
-    y = this.y;
-    // check win
-    if (y == -10) {
-      win();
+var Player = function() {
+  this.sprite = 'images/char-boy.png';
+  this.x = 200;
+  this.y = 400;
+  this.crashed = false;
+};
+
+Player.prototype.update = function() {
+  // check win
+  if (this.y == -10) {
+    win();
+  }
+  if (this.crashed) {
+    crashRemoval();
+    this.crashed = false;
+  }
+};
+
+Player.prototype.render = function() {
+  // draw the player just like we draw enemies
+  ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
+
+Player.prototype.handleInput = function(direction) {
+  /* player movement based on keydown handleInput
+   * the player cannot move off the screen
+   */
+  if (direction == 'left') {
+    if (this.x > 0) {
+      this.x -= 100;
     }
-  },
-  render: function() {
-    // draw the player just like we draw enemies
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-  },
-  handleInput: function(direction) {
-    /* player movement based on keydown handleInput
-     * the player cannot move off the screen
-     */
-    if (direction == 'left') {
-      if (x > 0) {
-        this.x -= 100;
-      }
-    } else if (direction == 'up') {
-      if (y > -10) {
-        this.y -= 82;
-      }
-    } else if (direction == 'right') {
-      if (x < 400) {
-        this.x += 100;
-      }
-    } else if (direction == 'down') {
-      if (y < 400) {
-        this.y += 82;
-      }
+  } else if (direction == 'up') {
+    if (this.y > -10) {
+      this.y -= 82;
     }
-  },
-  reset: function() {
-    this.y = 400;
-    this.x = 200;
-    allEnemies = [new Enemy(), new Enemy(), new Enemy(), new Enemy()];
-    for (var i = 0; i <= winCounter; i++) {
-      allEnemies.push(new Enemy());
+  } else if (direction == 'right') {
+    if (this.x < 400) {
+      this.x += 100;
+    }
+  } else if (direction == 'down') {
+    if (this.y < 400) {
+      this.y += 82;
     }
   }
-}
+};
+
+// reset the Player postion to starting position
+Player.prototype.reset = function() {
+  this.y = 400;
+  this.x = 200;
+};
+
 
 
 // Now instantiate your objects.
@@ -123,14 +120,41 @@ let Player = {
 // Place the player object in a variable called player
 let allEnemies = [new Enemy(), new Enemy(), new Enemy(), new Enemy()];
 
-let player = Player;
+let player = new Player();
 
 let winCounter = 0;
 
+// check for player collision with any created enemy
+let checkCollision = function(enemyX, enemyY) {
+  if (player.y == enemyY) {
+    if (enemyX + 75 > player.x && enemyX < player.x + 75) {
+      player.reset();
+      player.crashed = true;
+      winCounter = 0; //win counter resets on loss
+    }
+  }
+};
+
+// handle removing extra enemies when a player crashes with an enemy
+let crashRemoval = function() {
+  while (allEnemies.length > 4) {
+    allEnemies.pop();
+  }
+}
+
 // Gems are the enemy! Resist the tempation.
 // An artistic comentary on nature and greed.
-win = function() {
+let win = function() {
   allEnemies = [new Gem()];
+}
+
+// When the gem is grabbed, enemies come back plus one
+let beginAgain = function() {
+  allEnemies = [];
+  winCounter++;
+  for (var i = 0; i < winCounter + 4; i++) {
+    allEnemies.push(new Enemy());
+  }
 }
 
 // This listens for key presses and sends the keys to your
